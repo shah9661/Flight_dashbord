@@ -2,6 +2,4 @@ streamlit
 pandas
 plotly
 python-dotenv
-psycopg2
-csv
-os
+psycopg2-binary
