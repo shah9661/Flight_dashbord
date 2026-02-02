@@ -1,10 +1,8 @@
 from dotenv import load_dotenv
 load_dotenv()
-
 import psycopg2
 import csv
 import os
-from psycopg2.extras import execute_values
 
 conn = psycopg2.connect(
     host=os.getenv("DB_HOST"),
@@ -15,29 +13,21 @@ conn = psycopg2.connect(
 )
 
 cur = conn.cursor()
-print(" Connected to DB")
-
+print('Connected')
 rows = []
 with open("indigo.csv", "r", encoding="utf-8") as f:
     reader = csv.reader(f)
     next(reader)
     for row in reader:
         rows.append(row)
-
-print(f" Inserting {len(rows)} rows...")
-
-query = """
-INSERT INTO public.indigo
-(airline, date_of_journey, source, destination, route, dep_time, duration, total_stops, price)
-VALUES %s
-"""
-
-execute_values(cur, query, rows)
+        print(row)
+cur.execute("""
+    INSERT INTO indigo
+    (Airline, Date_of_Journey, Source, Destination, Route, Dep_Time,Duration, Total_Stops, Price)
+    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+""", rows)
 
 conn.commit()
-print(" Data committed")
-
 cur.close()
 conn.close()
-
-print(" DONE CSV imported")
+print("CSV imported successfully (FAST)")
