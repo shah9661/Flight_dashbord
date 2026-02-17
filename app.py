@@ -95,7 +95,7 @@ else:
     Built using:
     - Python
     - Pandas
+    - Plotly
     - Streamlit
     - PostgreSQL
-    - Plotly
     """)
