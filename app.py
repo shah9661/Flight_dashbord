@@ -11,7 +11,7 @@ def get_db():
 
 db = get_db()
 
-st.sidebar.title('✈️ Flights Analytics')
+st.sidebar.title(' Flights Analytics')
 
 user_option = st.sidebar.selectbox(
     'Menu',
@@ -96,7 +96,6 @@ else:
     - Python
     - Pandas
     - Streamlit
-    - Azure SQL
-    - SQL Server Management Studio
+    - PostgreSQL
     - Plotly
     """)

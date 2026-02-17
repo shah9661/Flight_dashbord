@@ -24,8 +24,6 @@ with open("indigo.csv", "r", encoding="utf-8") as f:
     for row in reader:
         rows.append(row)
 
-print(f" Inserting {len(rows)} rows...")
-
 query = """
 INSERT INTO public.indigo
 (airline, date_of_journey, source, destination, route, dep_time, duration, total_stops, price)
@@ -35,9 +33,7 @@ VALUES %s
 execute_values(cur, query, rows)
 
 conn.commit()
-print(" Data committed")
 
 cur.close()
 conn.close()
 
-print(" DONE CSV imported")
