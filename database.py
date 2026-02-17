@@ -1,13 +1,18 @@
 import os
 import psycopg2
+from psycopg2 import pool
 from dotenv import load_dotenv
 
 load_dotenv()
 
+
 class DB:
+
     def __init__(self):
         try:
-            self.conn = psycopg2.connect(
+            self.connection_pool = psycopg2.pool.SimpleConnectionPool(
+                minconn=1,
+                maxconn=5,
                 host=os.getenv("DB_HOST"),
                 database=os.getenv("DB_NAME"),
                 user=os.getenv("DB_USER"),
@@ -16,56 +21,114 @@ class DB:
                 sslmode="require",
                 connect_timeout=30
             )
-            self.cursor = self.conn.cursor()
-            print(" PostgreSQL connection established")
 
         except Exception as e:
-            print(" Connection error:", e)
+            self.connection_pool = None
+
+    # Utility Methods
+
+
+    def get_connection(self):
+        if self.connection_pool:
+            return self.connection_pool.getconn()
+        return None
+
+    def return_connection(self, conn):
+        if self.connection_pool and conn:
+            self.connection_pool.putconn(conn)
+
+
+    # Fetch City Names
+   
 
     def fetch_city_name(self):
+        conn = None
         try:
-            self.cursor.execute("""
+            conn = self.get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute("""
                 SELECT DISTINCT destination FROM public.indigo
                 UNION
                 SELECT DISTINCT source FROM public.indigo
             """)
-            return [row[0] for row in self.cursor.fetchall()]
+
+            data = cursor.fetchall()
+            cursor.close()
+
+            return [row[0] for row in data]
+
         except Exception as e:
-            self.conn.rollback()
-            print(" fetch_city_name error:", e)
             return []
 
+        finally:
+            if conn:
+                self.return_connection(conn)
+
+    
+    # Fetch Flights Between Cities
+    
+
     def fetch_all_flight(self, source, destination):
+        conn = None
         try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+
             query = """
                 SELECT airline, route, dep_time, duration, price
                 FROM public.indigo
                 WHERE source = %s AND destination = %s
             """
-            self.cursor.execute(query, (source, destination))
-            return self.cursor.fetchall()
+
+            cursor.execute(query, (source, destination))
+            data = cursor.fetchall()
+            cursor.close()
+
+            return data
+
         except Exception as e:
-            self.conn.rollback()
-            print("fetch_all_flight error:", e)
             return []
 
+        finally:
+            if conn:
+                self.return_connection(conn)
+
+    # Airline Frequency (Pie Chart)
+
     def fetch_airline_frequency(self):
+        conn = None
         try:
-            self.cursor.execute("""
+            conn = self.get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute("""
                 SELECT airline, COUNT(*)
                 FROM public.indigo
                 GROUP BY airline
             """)
-            data = self.cursor.fetchall()
+
+            data = cursor.fetchall()
+            cursor.close()
+
             return [x[0] for x in data], [x[1] for x in data]
+
         except Exception as e:
-            self.conn.rollback()
-            print(" fetch_airline_frequency error:", e)
             return [], []
 
+        finally:
+            if conn:
+                self.return_connection(conn)
+    # Busy Airport (Bar Chart)
+
+
     def fetch_busy_airport(self):
+        conn = None
         try:
-            self.cursor.execute("""
+            conn = self.get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute("""
                 SELECT city, COUNT(*)
                 FROM (
                     SELECT source AS city FROM public.indigo
@@ -75,30 +138,52 @@ class DB:
                 GROUP BY city
                 ORDER BY COUNT(*) DESC
             """)
-            data = self.cursor.fetchall()
+
+            data = cursor.fetchall()
+            cursor.close()
+
             return [x[0] for x in data], [x[1] for x in data]
+
         except Exception as e:
-            self.conn.rollback()
-            print(" fetch_busy_airport error:", e)
             return [], []
 
+        finally:
+            if conn:
+                self.return_connection(conn)
+
+    # Daily Frequency (Line Chart)
+  
+
     def daily_frequency(self):
+        conn = None
         try:
-            self.cursor.execute("""
+            conn = self.get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute("""
                 SELECT date_of_journey, COUNT(*)
                 FROM public.indigo
                 GROUP BY date_of_journey
                 ORDER BY date_of_journey
             """)
-            data = self.cursor.fetchall()
+
+            data = cursor.fetchall()
+            cursor.close()
+
             return [x[0] for x in data], [x[1] for x in data]
+
         except Exception as e:
-            self.conn.rollback()
-            print(" daily_frequency error:", e)
             return [], []
 
-    def close(self):
-        self.cursor.close()
-        self.conn.close()
+        finally:
+            if conn:
+                self.return_connection(conn)
 
-        
+    
+    # Close Entire Pool 
+
+
+    def close_pool(self):
+        if self.connection_pool:
+            self.connection_pool.closeall()
+
